@@ -1,9 +1,11 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
 from ftplib import FTP
 import os
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+
 
 class FTPClientApp:
+    """Graphical Interface for FTP Client"""
     def __init__(self, root):
         self.root = root
         self.root.title("FTP Client")
@@ -12,7 +14,6 @@ class FTPClientApp:
 
         self.ftp = None
 
-        # UI Elements
         self.setup_ui()
 
     def setup_ui(self):
@@ -43,9 +44,6 @@ class FTPClientApp:
         self.tree.heading("Name", text="Name")
         self.tree.heading("Size", text="Size")
         self.tree.heading("Type", text="Type")
-        self.tree.column("Name", anchor="w", width=200)
-        self.tree.column("Size", anchor="e", width=100)
-        self.tree.column("Type", anchor="center", width=100)
         self.tree.pack(fill=tk.BOTH, expand=True)
 
         # Buttons Frame
@@ -133,11 +131,82 @@ class FTPClientApp:
             self.ftp.quit()
             self.ftp = None
         messagebox.showinfo("Disconnect", "Disconnected from FTP server.")
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+
+
+def cli_mode():
+    """Command-Line Interface for FTP Client"""
+    print("Welcome to FTP Client CLI!")
+    server = input("Enter server address: ")
+    username = input("Enter username: ")
+    password = input("Enter password: ")
+
+    try:
+        ftp = FTP(server)
+        ftp.login(user=username, passwd=password)
+        print(f"Connected to FTP server: {server}")
+
+        while True:
+            print("\nCommands:")
+            print("1. List Files")
+            print("2. Upload File")
+            print("3. Download File")
+            print("4. Quit")
+
+            choice = input("Enter your choice: ")
+
+            if choice == "1":
+                files = ftp.nlst()
+                print("\nFiles on Server:")
+                for file in files:
+                    print(file)
+
+            elif choice == "2":
+                filepath = input("Enter the full path of the file to upload: ")
+                try:
+                    with open(filepath, "rb") as file:
+                        ftp.storbinary(f"STOR {os.path.basename(filepath)}", file)
+                        print(f"Uploaded {os.path.basename(filepath)} successfully.")
+                except FileNotFoundError:
+                    print("File not found.")
+
+            elif choice == "3":
+                filename = input("Enter the filename to download: ")
+                save_path = input("Enter the directory to save the file: ")
+                try:
+                    with open(os.path.join(save_path, filename), "wb") as file:
+                        ftp.retrbinary(f"RETR {filename}", file.write)
+                        print(f"Downloaded {filename} successfully.")
+                except Exception as e:
+                    print(f"Error: {e}")
+
+            elif choice == "4":
+                ftp.quit()
+                print("Disconnected from FTP server.")
+                break
+
+            else:
+                print("Invalid choice. Try again.")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+def main():
+    """Main function to select CLI or GUI mode."""
+    print("FTP Client")
+    print("1. CLI Mode")
+    print("2. GUI Mode")
+
+    choice = input("Enter your choice (1/2): ")
+    if choice == "1":
+        cli_mode()
+    elif choice == "2":
+        root = tk.Tk()
+        app = FTPClientApp(root)
+        root.mainloop()
+    else:
+        print("Invalid choice. Exiting.")
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = FTPClientApp(root)
-    root.mainloop()
+    main()
