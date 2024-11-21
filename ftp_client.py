@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from ftplib import FTP
 import os
 import threading
@@ -16,7 +16,7 @@ class FTPApp:
         client_frame = tk.Frame(self.root, padx=10, pady=10)
         client_frame.pack(fill="both", expand=True)
 
-        tk.Label(client_frame, text="FTP Client").grid(row=0, columnspan=2, pady=10)
+        tk.Label(client_frame, text="FTP Client").grid(row=0, columnspan=3, pady=10)
         tk.Label(client_frame, text="Server:").grid(row=1, column=0, sticky="w")
         tk.Label(client_frame, text="Port:").grid(row=2, column=0, sticky="w")
         tk.Label(client_frame, text="Username:").grid(row=3, column=0, sticky="w")
@@ -33,9 +33,15 @@ class FTPApp:
         self.password_entry.grid(row=4, column=1, pady=2)
 
         connect_button = tk.Button(client_frame, text="Connect", command=self.connect_to_server)
-        connect_button.grid(row=5, columnspan=2, pady=10)
+        connect_button.grid(row=5, column=0, pady=10)
 
-        # FTP Server Frame
+        upload_button = tk.Button(client_frame, text="Upload File", command=self.upload_file)
+        upload_button.grid(row=5, column=1, pady=10)
+
+        download_button = tk.Button(client_frame, text="Download File", command=self.download_file)
+        download_button.grid(row=5, column=2, pady=10)
+
+        # FTP Server Frame (Unchanged)
         server_frame = tk.Frame(self.root, padx=10, pady=10)
         server_frame.pack(fill="both", expand=True)
 
@@ -65,13 +71,38 @@ class FTPApp:
         password = self.password_entry.get()
 
         try:
-            ftp = FTP()
-            ftp.connect(server, int(port))
-            ftp.login(username, password)
+            self.ftp = FTP()
+            self.ftp.connect(server, int(port))
+            self.ftp.login(username, password)
             messagebox.showinfo("Connection Successful", f"Connected to {server}")
-            ftp.quit()
         except Exception as e:
             messagebox.showerror("Connection Error", str(e))
+
+    def upload_file(self):
+        try:
+            file_path = filedialog.askopenfilename()
+            if not file_path:
+                return
+            with open(file_path, "rb") as file:
+                file_name = os.path.basename(file_path)
+                self.ftp.storbinary(f"STOR {file_name}", file)
+            messagebox.showinfo("Upload Successful", f"File '{file_name}' uploaded successfully!")
+        except Exception as e:
+            messagebox.showerror("Upload Error", str(e))
+
+    def download_file(self):
+        try:
+            file_name = filedialog.askstring("Download File", "Enter the name of the file to download:")
+            if not file_name:
+                return
+            save_path = filedialog.asksaveasfilename()
+            if not save_path:
+                return
+            with open(save_path, "wb") as file:
+                self.ftp.retrbinary(f"RETR {file_name}", file.write)
+            messagebox.showinfo("Download Successful", f"File '{file_name}' downloaded successfully!")
+        except Exception as e:
+            messagebox.showerror("Download Error", str(e))
 
     def start_server(self):
         server_ip = self.server_ip_entry.get()
